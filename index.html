@@ -3,11 +3,10 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1, user-scalable=no" />
-  <title>Demo AR Vetrina – Caccia al Pandoro</title>
-  <!-- A-Frame & AR.js (marker-based) -->
+  <title>Demo AR Vetrina – Babbo Natale 3D</title>
+  <!-- A-Frame & AR.js -->
   <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
   <script src="https://cdn.jsdelivr.net/gh/AR-js-org/AR.js@3.4.4/aframe/build/aframe-ar.min.js"></script>
-  <!-- Particles (incluso in AR.js build aframe) -->
   <style>
     body { margin:0; font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto; background:#000; }
     .hud { position: fixed; inset: 0 auto auto 0; z-index: 2; padding: 12px; color: #fff;
@@ -25,48 +24,50 @@
 <body>
   <!-- HUD -->
   <div class="hud">
-    <span class="badge">Demo AR</span>
+    <span class="badge">AR Demo</span>
     <span class="badge">Marker "Hiro"</span>
-    <span class="badge">Tocca Pandoro o Cappello 🎁</span>
+    <span class="badge">Tocca Babbo Natale 🔔</span>
   </div>
   <div class="hint">
     <b>Come provarla</b>
     1) Apri questa pagina da smartphone (HTTPS).<br/>
-    2) Inquadra il marker "Hiro" stampato (bianco/nero).<br/>
-    3) Tocca il pandoro o il cappello per il premio digitale.
+    2) Inquadra il marker "Hiro".<br/>
+    3) Tocca Babbo Natale per sentire i campanelli.
   </div>
-  <div class="cta">Se non vedi niente, spostati dove c'è più luce o avvicinati al marker.</div>
-  <div class="footer">© Demo per Nicola – 2025</div>
+  <div class="cta">Se non vedi niente, avvicinati al marker o migliora la luce.</div>
+  <div class="footer">© Demo Nicola – 2025</div>
 
   <!-- Scena AR -->
   <a-scene embedded arjs="sourceType: webcam; detectionMode: mono; debugUIEnabled: false;">
+    <!-- Assets: metti questi file nella cartella /assets del repo -->
+    <a-assets timeout="10000">
+      <a-asset-item id="santa" src="assets/merry_christmas_free_download.glb"></a-asset-item>
+      <audio id="bells" src="assets/the-bells-of-santa-claus-32086.mp3" preload="auto" crossorigin="anonymous"></audio>
+    </a-assets>
+
     <a-entity camera></a-entity>
 
-    <!-- Marker: Hiro (preset) -->
+    <!-- Marker: Hiro -->
     <a-marker preset="hiro">
-
       <!-- Pedana -->
       <a-cylinder position="0 0 0" radius="0.75" height="0.05" color="#333"></a-cylinder>
 
-      <!-- Pandoro stilizzato -->
-      <a-cone id="pandoro" position="0 0.9 0" radius-bottom="0.55" radius-top="0.25"
-              height="1.2" color="#ffd54d" shadow="cast:true; receive:true"></a-cone>
-      <a-sphere position="0 1.6 0" radius="0.08" color="#ffffff" opacity="0.95"></a-sphere>
+      <!-- Babbo Natale (GLB) -->
+      <a-entity id="babbo"
+                gltf-model="#santa"
+                position="0 0.75 0"
+                rotation="0 0 0"
+                scale="0.6 0.6 0.6"
+                animation="property: rotation; to: 0 360 0; dur: 15000; loop: true; easing: linear"
+                animation-mixer
+                sound="src: #bells; on: click; volume: 1.0">
+      </a-entity>
 
-      <!-- Cappello di Babbo Natale (geometrie semplici) -->
-      <!-- Brim bianco -->
-      <a-torus id="cappello" position="0 1.58 0" radius="0.28" radius-tubular="0.06" color="#ffffff"></a-torus>
-      <!-- Cono rosso -->
-      <a-cone position="0 1.85 0" radius-bottom="0.26" radius-top="0.02" height="0.55" color="#d32f2f"></a-cone>
-      <!-- Pon pon -->
-      <a-sphere position="0 2.12 0" radius="0.07" color="#ffffff"></a-sphere>
+      <!-- Neve -->
+      <a-entity position="0 1.8 0" particle-system="preset: snow; particleCount: 250"></a-entity>
 
-      <!-- Neve (particles) -->
-      <a-entity id="snow" position="0 1.8 0"
-                particle-system="preset: snow; particleCount: 250"></a-entity>
-
-      <!-- Stelline (secondo particle system, dorato, movimento più veloce) -->
-      <a-entity id="stars" position="0 1.2 0"
+      <!-- Stelline dorate -->
+      <a-entity position="0 1.2 0"
         particle-system="color: #fff,#fff8e1,#ffe082; particleCount: 120; size: 0.08;
                          maxAge: 2; velocityValue: 0 0.7 0; accelerationValue: 0 -0.4 0; opacity: 0.9">
       </a-entity>
@@ -82,54 +83,28 @@
 
     <a-entity light="type: ambient; intensity: 0.6"></a-entity>
     <a-entity id="cursor" cursor="rayOrigin: mouse"></a-entity>
-    <a-entity raycaster="objects: #pandoro, #cappello"></a-entity>
+    <a-entity raycaster="objects: #babbo"></a-entity>
   </a-scene>
 
   <script>
-    // >>> PERSONALIZZA QUI l'URL del premio digitale <<<
-    const LINK_URL = "https://www.facebook.com/ChristmasDancingLights"; // cambia con l'URL esatto
-
+    // Tap/click su Babbo Natale = suono + piccola "pulsazione"
     document.addEventListener('DOMContentLoaded', () => {
-      const pandoro = document.querySelector('#pandoro');
-      const cappello = document.querySelector('#cappello');
+      const babbo = document.querySelector('#babbo');
 
-      // Animazione “salto + giro” del pandoro
-      const playPandoroAnim = () => {
-        pandoro.setAttribute('animation__jump', {
-          property: 'position',
-          to: '0 1.4 0',
+      const pulse = () => {
+        // una piccola pulsazione di scala
+        babbo.setAttribute('animation__pulse', {
+          property: 'scale',
+          to: '0.68 0.68 0.68',
           dir: 'alternate',
-          dur: 350,
-          easing: 'easeOutCubic',
-          loop: 0
-        });
-        pandoro.setAttribute('animation__spin', {
-          property: 'rotation',
-          to: '0 360 0',
-          dur: 800,
-          easing: 'easeOutCubic',
-          loop: 0
+          dur: 180,
+          loop: 0,
+          easing: 'easeOutCubic'
         });
       };
 
-      // Click/tap → premio digitale (apre link in nuova tab)
-      const openPrize = () => {
-        try {
-          window.open(LINK_URL, '_blank', 'noopener');
-        } catch (e) {
-          location.href = LINK_URL; // fallback
-        }
-      };
-
-      // Interazioni
-      pandoro.addEventListener('click', () => { playPandoroAnim(); openPrize(); });
-      cappello.addEventListener('click', openPrize);
-
-      // Fallback: tap generico sulla scena (facoltativo, commenta se non lo vuoi)
-      document.body.addEventListener('click', (e) => {
-        const id = (e.target && e.target.id) || '';
-        if (id === 'pandoro' || id === 'cappello') return; // già gestito
-        // opzionale: playPandoroAnim(); openPrize();
+      babbo.addEventListener('click', () => {
+        pulse(); // il suono è già legato a on: click via componente sound
       });
     });
   </script>
