@@ -4,55 +4,61 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1, user-scalable=no" />
   <title>Demo AR Vetrina – Babbo Natale 3D</title>
-  <!-- A-Frame & AR.js -->
   <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
   <script src="https://cdn.jsdelivr.net/gh/AR-js-org/AR.js@3.4.4/aframe/build/aframe-ar.min.js"></script>
   <style>
-    body { margin:0; font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto; background:#000; }
-    .hud { position: fixed; inset: 0 auto auto 0; z-index: 2; padding: 12px; color: #fff;
+    :root { --bg: rgba(0,0,0,.7); --fg:#fff; }
+    html,body{ height:100%; }
+    body { margin:0; font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto; background:#000;
+           touch-action: none; }
+    .hud { position: fixed; inset: 0 auto auto 0; z-index: 3; padding: 12px; color: #fff;
            background: rgba(0,0,0,.35); backdrop-filter: blur(6px); border-bottom-right-radius: 12px; }
     .badge { display:inline-block; padding: 2px 8px; border-radius: 999px; background:#111;
              border:1px solid #333; font-size: 12px; margin-right:8px; }
-    .cta { position: fixed; left:50%; transform: translateX(-50%); bottom: 10px; z-index:2; color:#fff;
-           padding:8px 12px; border-radius:10px; background: rgba(0,0,0,.35); border:1px solid #333; }
-    .hint { position: fixed; right: 8px; top: 8px; z-index: 2; background: rgba(0,0,0,.35); color:#fff;
+    .footer { position: fixed; bottom: 0; right: 0; padding: 6px 10px; color:#fff; opacity: .7; font-size: 12px; z-index:3; }
+    .overlay { position: fixed; inset:0; display:flex; align-items:center; justify-content:center;
+               flex-direction:column; color:var(--fg); background:var(--bg); z-index: 10; }
+    .bar { width: min(320px, 80vw); height: 10px; border:1px solid #777; border-radius: 999px; overflow:hidden; margin-top:10px; }
+    .fill{ height:100%; width:0%; background:#7dd3fc; }
+    .hint { position: fixed; right: 8px; top: 8px; z-index: 3; background: rgba(0,0,0,.35); color:#fff;
             border:1px solid #333; border-radius: 10px; padding: 8px 10px; font-size: 12px; }
     .hint b{ display:block; font-size:13px; margin-bottom:4px; }
-    .footer { position: fixed; bottom: 0; right: 0; padding: 6px 10px; color:#fff; opacity: .7; font-size: 12px; }
   </style>
 </head>
 <body>
-  <!-- HUD -->
   <div class="hud">
     <span class="badge">AR Demo</span>
     <span class="badge">Marker "Hiro"</span>
     <span class="badge">Tocca Babbo Natale 🔔</span>
   </div>
   <div class="hint">
-    <b>Come provarla</b>
-    1) Apri questa pagina da smartphone (HTTPS).<br/>
-    2) Inquadra il marker "Hiro".<br/>
-    3) Tocca Babbo Natale per sentire i campanelli.
+    <b>Consigli</b>
+    Avvicinati al marker, evita riflessi forti. Audio dopo il primo tocco.
   </div>
-  <div class="cta">Se non vedi niente, avvicinati al marker o migliora la luce.</div>
-  <div class="footer">© Demo Nicola – 2025</div>
+  <div class="footer">© Demo per Nicola – 2025</div>
 
-  <!-- Scena AR -->
-  <a-scene embedded arjs="sourceType: webcam; detectionMode: mono; debugUIEnabled: false;">
-    <!-- Assets: metti questi file nella cartella /assets del repo -->
-    <a-assets timeout="10000">
+  <!-- Overlay caricamento -->
+  <div id="loader" class="overlay" role="status" aria-live="polite">
+    <div>Caricamento… <span id="pct">0%</span></div>
+    <div class="bar"><div id="fill" class="fill"></div></div>
+    <div style="font-size:12px;opacity:.8;margin-top:6px;">Attendi l’attivazione della fotocamera…</div>
+  </div>
+
+  <a-scene
+      embedded
+      arjs="sourceType: webcam; detectionMode: mono; debugUIEnabled: false;"
+      renderer="colorManagement: true; antialias: true">
+    <a-assets id="assets" timeout="25000">
       <a-asset-item id="santa" src="assets/santa_lowpoly.glb"></a-asset-item>
       <audio id="bells" src="assets/bells.wav" preload="auto" crossorigin="anonymous"></audio>
     </a-assets>
 
     <a-entity camera></a-entity>
 
-    <!-- Marker: Hiro -->
     <a-marker preset="hiro">
-      <!-- Pedana -->
       <a-cylinder position="0 0 0" radius="0.75" height="0.05" color="#333"></a-cylinder>
 
-<!-- Babbo Natale (GLB) -->
+      <!-- Babbo Natale: scala ridotta e bloccata -->
       <a-entity id="babbo"
                 gltf-model="#santa"
                 position="0 0.65 0"
@@ -62,21 +68,14 @@
                 sound="src: #bells; on: click; volume: 1.0">
       </a-entity>
 
-      <!-- Neve -->
-      <a-entity position="0 1.8 0" particle-system="preset: snow; particleCount: 250"></a-entity>
+      <!-- Neve e stelline: le accendiamo dopo il load per non pesare all’avvio -->
+      <a-entity id="snow" position="0 1.8 0" visible="false"></a-entity>
+      <a-entity id="stars" position="0 1.2 0" visible="false"></a-entity>
 
-      <!-- Stelline dorate -->
-      <a-entity position="0 1.2 0"
-        particle-system="color: #fff,#fff8e1,#ffe082; particleCount: 120; size: 0.08;
-                         maxAge: 2; velocityValue: 0 0.7 0; accelerationValue: 0 -0.4 0; opacity: 0.9">
-      </a-entity>
-
-      <!-- Testo -->
       <a-entity position="0 0.15 0" rotation="-90 0 0">
-        <a-text value="Caccia al Pandoro" color="#fff" align="center" width="6"></a-text>
+        <a-text value="Christmas AR" color="#fff" align="center" width="6"></a-text>
       </a-entity>
 
-      <!-- Luci -->
       <a-entity light="type: directional; intensity: 0.9" position="1 2 1"></a-entity>
     </a-marker>
 
@@ -86,25 +85,62 @@
   </a-scene>
 
   <script>
-    // Tap/click su Babbo Natale = suono + piccola "pulsazione"
-    document.addEventListener('DOMContentLoaded', () => {
-      const babbo = document.querySelector('#babbo');
+    // --- Previeni zoom/doppio tap ---
+    document.addEventListener('dblclick', (e)=>{ e.preventDefault(); e.stopPropagation(); }, {passive:false});
+    document.addEventListener('gesturestart', (e)=>{ e.preventDefault(); }, {passive:false});
 
-      const pulse = () => {
-        // una piccola pulsazione di scala
-        babbo.setAttribute('animation__pulse', {
-          property: 'scale',
-          to: '0.68 0.68 0.68',
-          dir: 'alternate',
-          dur: 180,
-          loop: 0,
-          easing: 'easeOutCubic'
-        });
-      };
+    const loader = document.getElementById('loader');
+    const pct = document.getElementById('pct');
+    const fill = document.getElementById('fill');
 
-      babbo.addEventListener('click', () => {
-        pulse(); // il suono è già legato a on: click via componente sound
-      });
+    // Aggiorna barra durante il download assets
+    const assets = document.getElementById('assets');
+    assets.addEventListener('progress', (e) => {
+      // e.detail.loadedBytes e e.detail.totalBytes non sempre sono disponibili in A-Frame; usiamo item/total
+      const itemsLoaded = e.detail.loadedItems || 0;
+      const itemsTotal = e.detail.totalItems || 1;
+      const p = Math.round((itemsLoaded / itemsTotal) * 100);
+      pct.textContent = p + '%';
+      fill.style.width = p + '%';
+    });
+
+    // Quando il modello è pronto
+    const babbo = document.getElementById('babbo');
+    let modelReady = false, cameraReady = false;
+
+    const maybeHideLoader = () => {
+      if (modelReady && cameraReady) {
+        loader.style.display = 'none';
+        // Accendi particelle SOLO ora per risparmiare CPU all’avvio
+        const snow = document.getElementById('snow');
+        const stars = document.getElementById('stars');
+        snow.setAttribute('particle-system', 'preset: snow; particleCount: 200');
+        stars.setAttribute('particle-system',
+          'color: #fff,#fff8e1,#ffe082; particleCount: 90; size: 0.08; maxAge: 2; velocityValue: 0 0.7 0; accelerationValue: 0 -0.4 0; opacity: 0.9');
+        snow.setAttribute('visible', 'true');
+        stars.setAttribute('visible', 'true');
+      }
+    };
+
+    babbo.addEventListener('model-loaded', () => { modelReady = true; maybeHideLoader(); });
+    babbo.addEventListener('model-error', () => { loader.innerHTML = 'Errore nel caricamento del modello.'; });
+
+    // AR.js: attendi attivazione camera (video pronto)
+    // Quando la camera è pronta, la scena emette 'camera-set-active'
+    const sceneEl = document.querySelector('a-scene');
+    sceneEl.addEventListener('camera-set-active', () => { cameraReady = true; maybeHideLoader(); });
+
+    // Blocca modifiche di scala da input multipli: accettiamo solo click singolo per suono
+    const stopScaleChange = (e) => { e.preventDefault(); e.stopPropagation(); };
+    babbo.addEventListener('dblclick', stopScaleChange);
+    babbo.addEventListener('touchstart', (e) => {
+      if (e.touches && e.touches.length > 1) { stopScaleChange(e); }
+    }, {passive:false});
+
+    // Al click riproduci solo il suono (niente animazioni di scala)
+    babbo.addEventListener('click', () => {
+      // Il componente <a-sound> già riproduce on:click
+      // Se vuoi forzare: babbo.components.sound.playSound();
     });
   </script>
 </body>
